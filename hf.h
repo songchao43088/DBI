@@ -1,23 +1,28 @@
 #ifndef CU_HF
 #define CU_HF
 
+typedef long RID;
 
-typedef struct hfile{
+struct hfile{
    int n_records;
    char ** schema;
    void * content;
-}HFILE;
+};
 
-typedef struct cursor{
+typedef struct hfile HFILE;
+
+struct cursor{
    void * pre_record;
    void * next_record;
    RID id;
-} CURSOR;
+};
 
-typedef long RID;
+typedef struct cursor CURSOR;
+
+
 
 // create a heap file on path using the types defined in the schema argument
-int hf_create(const char *path, char **schema);
+int hf_create(const char *path, char **schema, int schemac);
 
 // open heap file and return a heap file pointer
 // in case of error returns NULL

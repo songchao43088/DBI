@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-c -Wall
 LDFLAGS=
-SOURCES=OurDB.c
+SOURCES=OurDB.c hf.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=OurDB
 
