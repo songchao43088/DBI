@@ -247,7 +247,7 @@ int hf_create(const char *path, char **schema, int schemac){
 	hf.n_fields = schemac;
 	hf.content = NULL;
 	hf.path = path;
-	printf("%d",hf_record_length(&hf));
+	//printf("%d",hf_record_length(&hf));
 
 	FILE *fp=fopen(path,"w+");
 	if (fp==NULL){
@@ -286,13 +286,13 @@ HFILE *hf_open(const char *path){
 	HFILE *hf = (HFILE*)malloc(sizeof(HFILE));
 
 	if (hf==NULL){
-		printf("Not enough memory.");
+		printf("Not enough memory.\n");
 		exit(1);
 	}
 
 	FILE *fp=fopen(path,"rd");
 	if (fp==NULL){
-		printf("fail to open file.");
+		printf("Fail to open heap file.\n");
 		return NULL;
 	}
 	
@@ -349,6 +349,11 @@ HFILE *hf_open(const char *path){
 */
 void hf_close(HFILE *hf){
 //TODO: free substructure first.
+	int i;
+	for (i=0;i<hf->n_fields;i++)
+		free(hf->schema[i]);
+	free(hf->schema);
+	free(hf->schema_array);
 	free(hf);
         return;
 }
@@ -418,10 +423,6 @@ RID hf_insert(HFILE *hf, void *record){
 
 	// draw back the cursor to the beginning of file
         // overwrite the number of records to update
-        // TODO: why we need to read here?
-	//fseek(fp,0,SEEK_SET);
-	//fread(&tmp, sizeof(long), 1, fp);
-	//printf("%lu...***",tmp);
 	fseek(fp,0,SEEK_SET);
 	fwrite(&(hf->n_records), sizeof(long), 1, fp);
 	fclose(fp);
@@ -478,6 +479,12 @@ CURSOR *hf_scan_open(HFILE *hf, COND* con, int conditions){
 */
 void hf_scan_close(CURSOR *cur){
 	//TODO:free condition
+	int i;
+	for(i=0;i<cur->conditions;i++){
+		free((void *)cur->con[i].op);
+		free(cur->con[i].value);
+	}
+	free(cur->con);
 	free(cur);
         return;
 }

@@ -1,23 +1,83 @@
-
+#include "hf.h"
+#include "parse.h"
 /*
 	parse.c
 */
 
 //
+
+void import_record(HFILE *hf){
+	void * record = calloc(hf_record_length(hf),sizeof(char));
+				int offset = 0;
+				int i = 0;	
+				int k = 0;
+char line[1000];			
+				line[i] = getchar();
+				
+				while(line[i]!=EOF){	
+		
+					while(line[i]!='\n'){
+
+						//printf("!!!%c\n",line[i]);
+						while (line[i]!= ','){
+							if (line[i]=='\n') {
+								break;
+							}
+							i++;
+							line[i] = getchar();
+
+						}
+						
+						
+						if (line[i]=='\n')
+							break;
+						line[i]=0;
+
+						(*encode[hf->schema_array[k]])(record, line, &offset,atoi((hf->schema[k])+1));
+						k++;
+						i=0;
+						line[i] = getchar();
+					}
+					if (line[i]=='\n') {
+						line[i]=0;
+
+						(*encode[hf->schema_array[k]])(record, line, &offset,atoi((hf->schema[k])+1));
+					}
+
+					hf_insert(hf, record);
+					line[i]=0;
+					i=0;
+					k=0;
+					offset = 0;
+					line[i] = getchar();
+				}
+	free(record);
+}
+
 void printrecord(HFILE *hf, void *record, int * projection, int pyesno){
         //printf("Enter into print records!!\n");
 	int j;
 	char buf[100];
 	int offset = 0;
+	int first = 0;
 	(*decode[hf->schema_array[0]])(record, buf, &offset,atoi((hf->schema[0])+1));
-	if (pyesno == 0 || projection[0] == 1)					
+	//printf("%d,%d%d%d%d",pyesno,projection[0],projection[1],projection[2],projection[3]);
+	if (pyesno == 0 || projection[0] == 1){					
 		printf("%s",buf);
+		first = 1;
+		}
 	for (j = 1; j < hf->n_fields; j++)
 	{
 
 		(*decode[hf->schema_array[j]])(record, buf, &offset,atoi((hf->schema[j])+1));
-		if (pyesno == 0 || projection[j] == 1)						
-			printf(",%s",buf);
+		if (pyesno == 0 || projection[j] == 1) {
+			if (first == 1)	{		
+				printf(",%s",buf);
+			} else {
+				printf("%s",buf);
+				first = 1;
+			}
+		}
 		//parse
 	}
 	printf("\n");
@@ -35,6 +95,8 @@ void query(int argc, char** argv){
 	int *projection;
 	int pyesno = 0;
 	hf = hf_open(argv[1]);
+	if (hf == NULL)
+		return ;
 	projection = (int*)calloc(hf->n_fields,sizeof(int));
 	
 	//printf("%d, %d, %d ,%d \n", hf->schema_array[0],hf->schema_array[1],hf->schema_array[2],hf->schema_array[3]);
@@ -56,11 +118,16 @@ void query(int argc, char** argv){
 	}
 	//printf("conds: %d\n",num);
 	num = 0;
-	if (con != NULL){
+	if (1/*con != NULL*/){
 		for (i=2; i<argc;i++){
+			//printf("%c,%c",argv[i][0],argv[i][1]);
 			if (argv[i][0]=='-' && argv[i][1]=='s'){
 				char *op = (char*)malloc(5*sizeof(char));
 				void *value = malloc(110*sizeof(char));
+				if (atoi(&(argv[i][2]))==0) {
+					printf("Invalid Column\n");
+					return;
+				}
 				con[num].field=atoi(&(argv[i][2]));
 				
 				i++;
@@ -75,6 +142,10 @@ void query(int argc, char** argv){
 				//printf("convalue :%s\n",(char*)con[num].value);
 				num++;
 			} else if (argv[i][0]=='-' && argv[i][1]=='p'){
+				if (atoi(&(argv[i][2]))==0) {
+					printf("Invalid Column\n");
+					return;
+				}
 				int column = atoi(&(argv[i][2]));
 				pyesno = 1;
 				projection[column-1]=1;
@@ -102,6 +173,9 @@ void query(int argc, char** argv){
 		}
 	} while (id != -1);
 	hf_scan_close(cur);
+	free(projection);
+	hf_close(hf);
+	free(record);
 	return;
 }
 

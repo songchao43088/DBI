@@ -3,7 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "hf.h"
-#include "parse.c"
+#include "parse.h"
+
+
 
 
 int main(int argc, char** argv){
@@ -68,11 +70,9 @@ int main(int argc, char** argv){
 			printf("The number of fields does not match ! \n");
 			return 1;
 		}
-                // TODO: 
-		//printf("%d\n",fields);
-		//printf("%s\n",line);
+                
 		inputschema=(char**)malloc((fields)*sizeof(char*));
-		inputschema[4]=(char*)malloc(5*sizeof(char));
+
 		i = 0;
 		j = 0;
 		k = 0;
@@ -101,65 +101,25 @@ int main(int argc, char** argv){
 
 			if (j<fields)
 				inputschema[j]=(char*)malloc(5*sizeof(char));
-	
 		}
 
 		if (is_new ==1) {
 			hf_create(argv[1], inputschema, fields);
 			printf("A new heap file is created!\n");
-                        // TODO: import the records
+			hf = hf_open(argv[1]);
+			import_record(hf);
 		} else {
 			if (compareschema(hf->schema,inputschema,fields)!=0) {
 				printf("Fields do not match ! \n");
 				return 1;
 			} else {
-				
-				void * record = calloc(hf_record_length(hf),sizeof(char));
-				int offset = 0;
-				i = 0;	
-				k = 0;			
-				line[i] = getchar();
-				
-				while(line[i]!=EOF){	
-		
-					while(line[i]!='\n'){
-
-						printf("!!!%c\n",line[i]);
-						while (line[i]!= ','){
-							if (line[i]=='\n') {
-								break;
-							}
-							i++;
-							line[i] = getchar();
-
-						}
-						
-						
-						if (line[i]=='\n')
-							break;
-						line[i]=0;
-
-						(*encode[hf->schema_array[k]])(record, line, &offset,atoi((hf->schema[k])+1));
-						k++;
-						i=0;
-						line[i] = getchar();
-					}
-					if (line[i]=='\n') {
-						line[i]=0;
-
-						(*encode[hf->schema_array[k]])(record, line, &offset,atoi((hf->schema[k])+1));
-					}
-
-					hf_insert(hf, record);
-					line[i]=0;
-					i=0;
-					k=0;
-					offset = 0;
-					line[i] = getchar();
-				}
-				
+				import_record(hf);
 			}
 		}
+		for (i=0;i<=j;i++)
+			free(inputschema[i]);
+		free(inputschema);
+		hf_close(hf);
 	} else 
           query(argc, argv);
 
