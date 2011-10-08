@@ -6,6 +6,7 @@ typedef long RID;
 struct hfile{
    long n_records;
    char ** schema;
+   int *schema_array;
    int n_fields;
    void * content;
    const char *path;
@@ -21,7 +22,39 @@ struct cursor{
 
 typedef struct cursor CURSOR;
 
+int compareschema(char  **a, char **b, int length);
 
+int encode_i1(void *record, char *line, int *offset, int length);
+
+int encode_i2(void *record, char *line, int *offset, int length);
+
+int encode_i4(void *record, char *line, int *offset, int length);
+
+int encode_i8(void *record, char *line, int *offset, int length);
+
+int encode_r4(void *record, char *line, int *offset, int length);
+
+int encode_r8(void *record, char *line, int *offset, int length);
+
+int encode_cx(void *record, char *line, int *offset, int length);
+
+int (*encode[7])(void *record, char *line, int *offset, int length);
+
+int decode_i1(void *record, char *line, int *offset, int length);
+
+int decode_i2(void *record, char *line, int *offset, int length);
+
+int decode_i4(void *record, char *line, int *offset, int length);
+
+int decode_i8(void *record, char *line, int *offset, int length);
+
+int decode_r4(void *record, char *line, int *offset, int length);
+
+int decode_r8(void *record, char *line, int *offset, int length);
+
+int decode_cx(void *record, char *line, int *offset, int length);
+
+int (*decode[7])(void *record, char *line, int *offset, int length);
 
 // create a heap file on path using the types defined in the schema argument
 int hf_create(const char *path, char **schema, int schemac);

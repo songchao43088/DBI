@@ -13,4 +13,4 @@ $(EXECUTABLE): $(OBJECTS)
 .o:
 	$(CC) $(CFLAGS) $< -o $@
 clean: 
-	rm $(EXECUTABLE) *.o
+	rm $(EXECUTABLE) *.o *.db
