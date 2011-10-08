@@ -4,9 +4,11 @@
 typedef long RID;
 
 struct hfile{
-   int n_records;
+   long n_records;
    char ** schema;
+   int n_fields;
    void * content;
+   const char *path;
 };
 
 typedef struct hfile HFILE;
