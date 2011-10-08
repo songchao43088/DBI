@@ -3,6 +3,60 @@
 #include <stdlib.h>
 #include <string.h>
 
+int compare_i1(void *record, int offset, void *value, int length){
+	char* target = record + offset;
+	char x = target[0];
+	char y = atoi((char*)value);
+	return x < y ? -1 : x > y ? 1 : 0;
+}
+
+int compare_i2(void *record, int offset, void *value, int length){
+	short* target = record + offset;
+	short x = target[0];
+	short y = atoi((char*)value);
+	return x < y ? -1 : x > y ? 1 : 0;
+}
+
+int compare_i4(void *record, int offset, void *value, int length){
+	int* target = record + offset;
+	int x = target[0];
+	int y = atoi((char*)value);
+	return x < y ? -1 : x > y ? 1 : 0;
+}
+
+int compare_i8(void *record, int offset, void *value, int length){
+	long* target = record + offset;
+	long x = target[0];
+	long y = atoi((char*)value);
+	return x < y ? -1 : x > y ? 1 : 0;
+}
+
+int compare_cx(void *record, int offset, void *value, int length){
+	char* target = record + offset;
+	char x[length+1];
+	char y[length+1];
+	strncpy(x, target, length);
+	x[length]=0;
+	strncpy(y, (char *)value, length);
+	y[length]=0;
+	//printf("%s vs %s\n", x, y);
+	return strcmp(x,y);
+}
+
+int compare_r4(void *record, int offset, void *value, int length){	
+	float* target = record + offset;
+	float x = target[0];
+	float y = atof((char*)value);
+	//printf("%f vs %f\n",x,y);
+	return x < y ? -1 : x > y ? 1 : 0;
+}
+
+int compare_r8(void *record, int offset, void *value, int length){
+	double* target = record + offset;
+	double x = target[0];
+	double y = atof((char*)value);
+	return x < y ? -1 : x > y ? 1 : 0;
+}
 
 int decode_i1(void *record, char *line, int *offset, int length){
 	char* target = record + *offset;
@@ -190,12 +244,12 @@ HFILE *hf_open(const char *path){
 		printf("fail to open file.");
 		return NULL;
 	}
-	printf(" i am at %lu\n",ftell(fp));
+	//printf(" i am at %lu\n",ftell(fp));
 	fread(&n_records, sizeof(long),1,fp);
 	
 
 	hf->n_records=n_records;
-printf("\nNo.of R:%lu\n",hf->n_records);
+//printf("\nNo.of R:%lu\n",hf->n_records);
 	fread(&n_fields, sizeof(int),1,fp);
 	hf->n_fields=n_fields;
 	hf->schema=(char**)malloc(n_fields*sizeof(char*));
@@ -314,11 +368,79 @@ long hf_records(HFILE *hf){
 	return hf->n_records;
 }
 
+CURSOR *hf_scan_open(HFILE *hf, COND* con, int conditions){
+	CURSOR *cur = (CURSOR*)malloc(sizeof(CURSOR));
+	cur->hf = hf;
+	cur->con = con;
+	cur->conditions = conditions;
+	cur->current = sizeof(long)+sizeof(int)+2*hf->n_fields;
+	return cur;
+}
+
+void hf_scan_close(CURSOR *cur){
+	//TODO:free condition
+	free(cur);
+}
+
+int calculate_offset(char **schema, int field){
+	int offset = 0;
+	int i;
+	//printf("field: %d\n",field);
+	for(i=1;i<field;i++){
+	//printf("size: %d\n",atoi(schema[i-1]+1));
+		offset += atoi(schema[i-1]+1);
+	}
+	//printf("wo mei cuo!\n");
+	return offset;
+}
+
+int filter(void *record, COND *con, int conditions, HFILE *hf){
+	int i;
+	//printf("conditions: %d\n",conditions);
+	for (i=0;i<conditions;i++){
+		
+		int offset = calculate_offset(hf->schema, con[i].field);
+		//printf("i: %d offset:%d use which compare: %d\n",i,offset,hf->schema_array[(con[i].field)-1]);
+		//printf("details: %d\n",/*(char*)record, offset,(char*)con[i].value, */atoi((hf->schema[con[i].field-1])+1));
+		int result = (*compare[hf->schema_array[(con[i].field)-1]])(record, offset,con[i].value, atoi((hf->schema[con[i].field-1])+1));
+		//printf("%s, %d\n",con[i]->op,result);
+		if (!strcmp(con[i].op,"=") && result !=0)
+			return 0;
+		else if (!strcmp(con[i].op,">") && result <=0)
+			return 0;
+		else if (!strcmp(con[i].op,"<") && result >=0)
+			return 0;
+		else if (!strcmp(con[i].op,">=") && result <0)
+			return 0;
+		else if (!strcmp(con[i].op,"<=") && result >0)
+			return 0;
+		else if (!strcmp(con[i].op,"<>") && result ==0)
+			return 0;
+	}
+	return 1;
+}
 
 
-
-
-
+RID hf_scan_next(CURSOR *cur, void *record){
+	long bound = sizeof(long)+sizeof(int)+2*cur->hf->n_fields+cur->hf->n_records*hf_record_length(cur->hf);
+		//printf("bound: %lu\n",bound);
+	if (cur->current >= bound)
+		return -1;
+	hf_record(cur->hf, cur->current, record);
+	//printrecord(cur->hf,record);
+	cur->current += hf_record_length(cur->hf);
+	//panduan;
+	while (filter(record, cur->con, cur->conditions, cur->hf) == 0){
+		//printf("in while\n");
+		if (cur->current >= bound)
+			return -1;
+		hf_record(cur->hf, cur->current, record);
+			//printrecord(cur->hf,record);
+		cur->current += hf_record_length(cur->hf);
+	}
+			//printf("out of while\n");
+	return cur->current - hf_record_length(cur->hf);
+}
 
 
 

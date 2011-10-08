@@ -14,13 +14,9 @@ struct hfile{
 
 typedef struct hfile HFILE;
 
-struct cursor{
-   void * pre_record;
-   void * next_record;
-   RID id;
-};
 
-typedef struct cursor CURSOR;
+
+
 
 int compareschema(char  **a, char **b, int length);
 
@@ -55,6 +51,23 @@ int decode_r8(void *record, char *line, int *offset, int length);
 int decode_cx(void *record, char *line, int *offset, int length);
 
 int (*decode[7])(void *record, char *line, int *offset, int length);
+
+int compare_i1(void *record, int offset, void *value, int length);
+
+int compare_i2(void *record, int offset, void *value, int length);
+
+int compare_i4(void *record, int offset, void *value, int length);
+
+int compare_i8(void *record, int offset, void *value, int length);
+
+int compare_r4(void *record, int offset, void *value, int length);
+
+int compare_r8(void *record, int offset, void *value, int length);
+
+int compare_cx(void *record, int offset, void *value, int length);
+
+int (*compare[7])(void *record, int offset, void *value, int length);
+
 
 // create a heap file on path using the types defined in the schema argument
 int hf_create(const char *path, char **schema, int schemac);
@@ -91,15 +104,31 @@ typedef struct {
         void *value;  // value to compare against
 } COND;
 
+struct cursor{
+   HFILE *hf;
+   COND *con;
+   int conditions;
+   RID current;
+};
+
+typedef struct cursor CURSOR;
+
 // start a scan (cursor) in the file
-CURSOR *hf_scan_open(HFILE *hf, COND*, int conditions);
+CURSOR *hf_scan_open(HFILE *hf, COND* con, int conditions);
 
 // stop a scan in the file
 void hf_scan_close(CURSOR *cur);
+
+int calculate_offset(char **schema, int field);
+
+int filter(void *record, COND *con, int conditions, HFILE *hf);
 
 // get the next entry of a scan
 // returns (rid_t) -1 in case we are out of records
 RID hf_scan_next(CURSOR *cur, void *record);
 
+void printrecord(HFILE *hf, void *record, int * projection, int pyesno);
+
+void query(int argc, char** argv);
 
 #endif
