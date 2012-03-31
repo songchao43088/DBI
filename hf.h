@@ -2,9 +2,17 @@
 #define CU_HF
 
 
-typedef struct hfile HFILE;
+typedef struct hfile{
+   int n_records;
+   char ** schema;
+   void * content;
+}HFILE;
 
-typedef struct cursor CURSOR;
+typedef struct cursor{
+   void * pre_record;
+   void * next_record;
+   RID id;
+} CURSOR;
 
 typedef long RID;
 
