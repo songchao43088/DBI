@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* field processing, compare value given by selection clause in command line
+   with corresponding fields of records in the heap file
+   return 0: equal
+   return -1: record < value
+   return 1: record > value
+*/
 int compare_i1(void *record, int offset, void *value, int length){
 	char* target = record + offset;
 	char x = target[0];
@@ -14,6 +20,7 @@ int compare_i2(void *record, int offset, void *value, int length){
 	short* target = record + offset;
 	short x = target[0];
 	short y = atoi((char*)value);
+
 	return x < y ? -1 : x > y ? 1 : 0;
 }
 
@@ -21,6 +28,7 @@ int compare_i4(void *record, int offset, void *value, int length){
 	int* target = record + offset;
 	int x = target[0];
 	int y = atoi((char*)value);
+
 	return x < y ? -1 : x > y ? 1 : 0;
 }
 
@@ -28,6 +36,7 @@ int compare_i8(void *record, int offset, void *value, int length){
 	long* target = record + offset;
 	long x = target[0];
 	long y = atoi((char*)value);
+
 	return x < y ? -1 : x > y ? 1 : 0;
 }
 
@@ -39,7 +48,7 @@ int compare_cx(void *record, int offset, void *value, int length){
 	x[length]=0;
 	strncpy(y, (char *)value, length);
 	y[length]=0;
-	//printf("%s vs %s\n", x, y);
+	
 	return strcmp(x,y);
 }
 
@@ -47,7 +56,7 @@ int compare_r4(void *record, int offset, void *value, int length){
 	float* target = record + offset;
 	float x = target[0];
 	float y = atof((char*)value);
-	//printf("%f vs %f\n",x,y);
+
 	return x < y ? -1 : x > y ? 1 : 0;
 }
 
@@ -55,14 +64,23 @@ int compare_r8(void *record, int offset, void *value, int length){
 	double* target = record + offset;
 	double x = target[0];
 	double y = atof((char*)value);
+
 	return x < y ? -1 : x > y ? 1 : 0;
 }
+
+
+/* field processing, decode 
+   read data at offset within heapfile 
+   write it to buffer line
+   return 0 if there is no segmentation fault
+*/
 
 int decode_i1(void *record, char *line, int *offset, int length){
 	char* target = record + *offset;
 	char i1 = target[0];
 	sprintf(line,"%d",i1);
 	*offset = *offset+length;
+
 	return 0;
 }
 
@@ -71,6 +89,7 @@ int decode_i2(void *record, char *line, int *offset, int length){
 	short i1 = target[0];
 	sprintf(line,"%d",i1);
 	*offset = *offset+length;
+
 	return 0;
 }
 
@@ -79,6 +98,7 @@ int decode_i4(void *record, char *line, int *offset, int length){
 	int i1 = target[0];
 	sprintf(line,"%d",i1);
 	*offset = *offset+length;
+
 	return 0;
 }
 
@@ -87,6 +107,7 @@ int decode_i8(void *record, char *line, int *offset, int length){
 	long i1 = target[0];
 	sprintf(line,"%lu",i1);
 	*offset = *offset+length;
+
 	return 0;
 }
 
@@ -95,6 +116,7 @@ int decode_r4(void *record, char *line, int *offset, int length){
 	float i1 = target[0];
 	sprintf(line,"%f",i1);
 	*offset = *offset+length;
+
 	return 0;
 }
 
@@ -103,26 +125,33 @@ int decode_r8(void *record, char *line, int *offset, int length){
 	double i1 = target[0];
 	sprintf(line,"%f",i1);
 	*offset = *offset+length;
+
 	return 0;
 }
 
 int decode_cx(void *record, char *line, int *offset, int length){
 	char * target;
-//printf("yyy\n");
 	target = record + *offset;
-//printf("xxx\n");
 	memcpy(line, target, length);
-//printf("zzz\n");
 	line[length]=0;
 	*offset = *offset+length;
+
 	return 0;
 }
+
+
+/* field processing, encode 
+   write the parsed string line to certain field of a record in heapfile
+   specified by the offset
+   return 0 if there is no segmentation fault
+*/
 
 int encode_i1(void *record, char *line, int *offset, int length){
 	char tmp;
 	tmp = atoi(line);
 	((char *)record)[*offset]=tmp;
 	*offset = *offset+length;
+
 	return 0;
 }
 
@@ -133,8 +162,8 @@ int encode_i2(void *record, char *line, int *offset, int length){
 	short * target;
 	target = record + *offset;
 	target[0]=tmp;
-printf("print short %d\n",target[0]);
 	*offset = *offset+length;
+
 	return 0;
 }
 int encode_i4(void *record, char *line, int *offset, int length){
@@ -144,6 +173,7 @@ int encode_i4(void *record, char *line, int *offset, int length){
 	target = record + *offset;
 	target[0]=tmp;
 	*offset = *offset+length;
+
 	return 0;
 }
 int encode_i8(void *record, char *line, int *offset, int length){
@@ -153,6 +183,7 @@ int encode_i8(void *record, char *line, int *offset, int length){
 	target = record + *offset;
 	target[0]=tmp;
 	*offset = *offset+length;
+
 	return 0;
 }
 int encode_r4(void *record, char *line, int *offset, int length){
@@ -162,6 +193,7 @@ int encode_r4(void *record, char *line, int *offset, int length){
 	target = record + *offset;
 	target[0]=tmp;
 	*offset = *offset+length;
+
 	return 0;
 }
 int encode_r8(void *record, char *line, int *offset, int length){
@@ -171,6 +203,7 @@ int encode_r8(void *record, char *line, int *offset, int length){
 	target = record + *offset;
 	target[0]=tmp;
 	*offset = *offset+length;
+
 	return 0;
 }
 int encode_cx(void *record, char *line, int *offset, int length){
@@ -181,21 +214,31 @@ int encode_cx(void *record, char *line, int *offset, int length){
 	else
 		strncpy(target, line, strlen(line));
 	*offset = *offset+length;
+
 	return 0;
 }
 
 
+/* compare schema a with schema b, given the same number of fields "length"
+   return 1: not match
+   return 0: match
+*/
 int compareschema(char  **a, char **b, int length) {
 	int i;
 	for(i=0;i<length;i++){
-		if (strcmp(a[i],b[i])!=0) {
-			printf("%d vs %d\n",a[i][2],b[i][2]);
-			return 1;}
+
+		if (strcmp(a[i],b[i])!=0) 
+		return 1;
 	}
+
 	return 0;
 }
 
 
+/* 
+   given a schema and the number of fields in schema
+   create a heapfile under specified path
+*/
 int hf_create(const char *path, char **schema, int schemac){
 	HFILE hf;
 	int i;
@@ -205,29 +248,36 @@ int hf_create(const char *path, char **schema, int schemac){
 	hf.content = NULL;
 	hf.path = path;
 	printf("%d",hf_record_length(&hf));
+
 	FILE *fp=fopen(path,"w+");
 	if (fp==NULL){
 		printf("fail to create file.");
 		exit(1);
 	}
+	// write the number of records and fields to heapfile
 	fwrite(&hf.n_records,sizeof(long),1,fp);
 	fwrite(&hf.n_fields,sizeof(int),1,fp);
-	printf("1\n");
+	// write the schema to heapfile
 	for(i = 0; i < schemac; i++)
 		if (schema[i][0] !='c'){
-	printf("2\n");
+	
 			fwrite(hf.schema[i],sizeof(char),2,fp);}
 		else {
-	printf("3\n");
+	
 			char tmp;
 			fwrite(hf.schema[i],sizeof(char),1,fp);
 			tmp=atoi(hf.schema[i]+1);
 			fwrite(&tmp,sizeof(char),1,fp);
 		}
+
 	fclose(fp);
 	return 0;
 }
 
+/*
+    open and return a heapfile given the path
+
+*/
 HFILE *hf_open(const char *path){
 	int n_records;	
 	int n_fields;
@@ -239,19 +289,25 @@ HFILE *hf_open(const char *path){
 		printf("Not enough memory.");
 		exit(1);
 	}
+
 	FILE *fp=fopen(path,"rd");
 	if (fp==NULL){
 		printf("fail to open file.");
 		return NULL;
 	}
-	//printf(" i am at %lu\n",ftell(fp));
-	fread(&n_records, sizeof(long),1,fp);
 	
-
+	// read the number of records
+	fread(&n_records, sizeof(long),1,fp);
 	hf->n_records=n_records;
-//printf("\nNo.of R:%lu\n",hf->n_records);
+
+        // read the number of fields
 	fread(&n_fields, sizeof(int),1,fp);
 	hf->n_fields=n_fields;
+
+        // read the schema
+        // field processing
+        // map schema to "schema_array" based on different data types
+        // "schema_array" determines accesses to different read/write/compare functions  
 	hf->schema=(char**)malloc(n_fields*sizeof(char*));
 	hf->schema_array=(int*)malloc(n_fields*sizeof(int));
 	for(i=0;i<n_fields;i++){
@@ -280,32 +336,48 @@ HFILE *hf_open(const char *path){
 
 	}
 	hf->path=path;
-	//TODO:data read.
-	//test
+	
 	fclose(fp);
+
 	return hf;
 	
 	
 }
 
+/* 
+     close heapfile and free memory allocation
+*/
 void hf_close(HFILE *hf){
 //TODO: free substructure first.
 	free(hf);
+        return;
 }
 
+
+/*
+     return number of fields in a heapfile
+*/
 int hf_fields(HFILE *hfp){
 	return hfp->n_fields;
 }
 
+
+/*
+     return a specific field
+*/
 char *hf_field(HFILE *hfp, int field){
 	return hfp->schema[field-1];
 }
 
+
+/*
+     return the total record length
+*/
 int hf_record_length(HFILE *hfp){
 	int sum=0;
 	int i;
 	for (i=1;i<=hf_fields(hfp);i++){
-		//printf("ddd:%s\n",hf_field(hfp, i));
+		
 		if (!strcmp(hf_field(hfp, i),"i1"))
 			sum+=1;
 		else if (!strcmp(hf_field(hfp, i),"i2"))
@@ -324,33 +396,44 @@ int hf_record_length(HFILE *hfp){
 
 }
 
+
+/*
+	insert a record in the heap file and return its RID
+*/
 RID hf_insert(HFILE *hf, void *record){
 	RID r;
-	long tmp;
+	//long tmp;
 	FILE *fp=fopen(hf->path,"r+");
 	if (fp==NULL){
 		printf("fail to create file.");
 		exit(1);
 	}
+
+        // move cursor to the end of file 
+        // append the record, n_records++
 	fseek(fp,0,SEEK_END);
-printf(" i am at the end%lu\n",ftell(fp));
 	r = ftell(fp);
 	fwrite(record, hf_record_length(hf), 1, fp);
-	
-	printf("rid:%lu\n",r);
 	hf->n_records++;
-	printf("%lu...",hf->n_records);
-	fseek(fp,0,SEEK_SET);
-printf(" i am at begin%lu\n",ftell(fp));
-	fread(&tmp, sizeof(long), 1, fp);
-	printf("%lu...***",tmp);
-	fseek(fp,0,SEEK_SET);
 
+	// draw back the cursor to the beginning of file
+        // overwrite the number of records to update
+        // TODO: why we need to read here?
+	//fseek(fp,0,SEEK_SET);
+	//fread(&tmp, sizeof(long), 1, fp);
+	//printf("%lu...***",tmp);
+	fseek(fp,0,SEEK_SET);
 	fwrite(&(hf->n_records), sizeof(long), 1, fp);
 	fclose(fp);
+
 	return r;
 }
 
+
+/*
+	read a record by giving the RID
+        The RID id is used as the offset
+*/
 int hf_record(HFILE *hf, RID id, void *record){
 	FILE *fp=fopen(hf->path,"r");
 	if (fp==NULL){
@@ -364,46 +447,78 @@ int hf_record(HFILE *hf, RID id, void *record){
 	return 0;
 }
 
+
+/*
+	return the total number of records in the file
+*/
 long hf_records(HFILE *hf){
 	return hf->n_records;
 }
 
+
+/*
+	start a scan (cursor) in the file
+*/
 CURSOR *hf_scan_open(HFILE *hf, COND* con, int conditions){
 	CURSOR *cur = (CURSOR*)malloc(sizeof(CURSOR));
 	cur->hf = hf;
 	cur->con = con;
 	cur->conditions = conditions;
+        // set the initial position of the cursor
+        // point to the first record
+        // we use 2-byte for the storage of each field in schema
 	cur->current = sizeof(long)+sizeof(int)+2*hf->n_fields;
+
 	return cur;
 }
 
+
+/*
+	close cursor and free memory allocation
+*/
 void hf_scan_close(CURSOR *cur){
 	//TODO:free condition
 	free(cur);
+        return;
 }
 
+
+/*
+	calculate the offset within a row of a particular field (column)
+        according to schema
+        return: offset of a particular field	
+*/
 int calculate_offset(char **schema, int field){
 	int offset = 0;
 	int i;
-	//printf("field: %d\n",field);
-	for(i=1;i<field;i++){
-	//printf("size: %d\n",atoi(schema[i-1]+1));
+	
+	for(i=1; i<field; i++){
+	
 		offset += atoi(schema[i-1]+1);
 	}
-	//printf("wo mei cuo!\n");
+	
 	return offset;
 }
 
+
+/*
+	filter records according to conditions in a heap file
+        return 0: record gets filtered off
+        return 1: record meets the conditions
+*/
 int filter(void *record, COND *con, int conditions, HFILE *hf){
 	int i;
-	//printf("conditions: %d\n",conditions);
+	
 	for (i=0;i<conditions;i++){
-		
+		// prepare parameters for function *compare
 		int offset = calculate_offset(hf->schema, con[i].field);
-		//printf("i: %d offset:%d use which compare: %d\n",i,offset,hf->schema_array[(con[i].field)-1]);
-		//printf("details: %d\n",/*(char*)record, offset,(char*)con[i].value, */atoi((hf->schema[con[i].field-1])+1));
-		int result = (*compare[hf->schema_array[(con[i].field)-1]])(record, offset,con[i].value, atoi((hf->schema[con[i].field-1])+1));
-		//printf("%s, %d\n",con[i]->op,result);
+                int column = (con[i].field)-1;
+		int function_num = hf->schema_array[column];
+		int field_length = atoi((hf->schema[column])+1);
+		
+		// compare the value in condition clause with corresponding field in records
+		int result = (*compare[function_num])(record, offset, con[i].value, field_length);
+		
 		if (!strcmp(con[i].op,"=") && result !=0)
 			return 0;
 		else if (!strcmp(con[i].op,">") && result <=0)
@@ -417,28 +532,39 @@ int filter(void *record, COND *con, int conditions, HFILE *hf){
 		else if (!strcmp(con[i].op,"<>") && result ==0)
 			return 0;
 	}
+
 	return 1;
 }
 
 
+/*
+	get the next entry of a scan
+        returns the RID of the next record that meets all the conditions
+	returns (rid_t) -1 in case we are out of records
+*/
 RID hf_scan_next(CURSOR *cur, void *record){
-	long bound = sizeof(long)+sizeof(int)+2*cur->hf->n_fields+cur->hf->n_records*hf_record_length(cur->hf);
-		//printf("bound: %lu\n",bound);
-	if (cur->current >= bound)
+
+	long schema_space = 2*cur->hf->n_fields;
+        long record_space = (cur->hf->n_records) * hf_record_length(cur->hf);
+	long file_size = sizeof(long) + sizeof(int) + schema_space + record_space;
+		
+	if (cur->current >= file_size)
 		return -1;
+
 	hf_record(cur->hf, cur->current, record);
-	//printrecord(cur->hf,record);
+	
 	cur->current += hf_record_length(cur->hf);
-	//panduan;
+     
+        // if the current record doesn't meet all the conditions, fetch and check the next
 	while (filter(record, cur->con, cur->conditions, cur->hf) == 0){
-		//printf("in while\n");
-		if (cur->current >= bound)
+		
+		if (cur->current >= file_size)
 			return -1;
 		hf_record(cur->hf, cur->current, record);
-			//printrecord(cur->hf,record);
+			
 		cur->current += hf_record_length(cur->hf);
 	}
-			//printf("out of while\n");
+			
 	return cur->current - hf_record_length(cur->hf);
 }
 
