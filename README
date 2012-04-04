@@ -1,0 +1,55 @@
+README of project 2.1
+W4112 Database Implementation
+authors: Chao Song (UNI: cs2994) Rongxin Du (UNI: rd2537)
+********************************************************************************
+Files: 
+"hf.h"	
+	the header given in project2.1 website, we modify and fill in the blank   
+"hf.c"	
+	corresponding .c file that defines functions declared in "hf.h"
+"OurDB.c"
+	contains int main(int argc, char** argv), parse user input command lines and generate results
+"parse.h"
+	declare some useful functions that are called in OurDB.c
+"parse.c"
+	corresponding .c file that defines functions declared in "parse.h"
+"Makefile"
+	SOURCES=OurDB.c hf.c parse.c
+	EXECUTABLE=OurDB
+	using gcc to compile
+	make clean: clean *.o *.hf, assume that the heap file is named as *.hf
+"example.acsv"
+	the testing example provided in project2.1 website
+"test.acsv"
+	the testing example written by us, testing fields:c1,c9,c100,i1,i2,i4,i8,r4,r8
+****************************************************************************************************************************
+Instructions on how to use our code in Linux:
+Let's take the example.acsv provided on project2.1 website as an example.
+Step 1: Make
+$ make clean
+$ make
+Step 2: import the CSV file to a heap file
+$ ./OurDB example.hf -i < example.acsv
+Step 3: show the content of the heap file
+$ ./OurDB example.hf
+Step 4: writing queries
+You can try to write queries like the following:
+	Query(1) ./OurDB example.hf -s1 "=" Orson -p1 -p3
+You can re-arrange the selection and projection order, the result will be the same, and by default we print out the results in the same column order as given by the schema. Note that the following query (2) gives the same result as query(1).
+	Query(2) ./OurDB example.hf -p3 -s1 "=" Orson -p1
+	Query(3) ./OurDB example.hf -s1 ">" H -s3 ">" 1957 -s4 "<=" 1.83 -p1 -p3 -p4
+Note that you must use space to separate adjacent tokens.
+You should input like the above queries, you can't input like this ./OurDB example.hf -s1">"H -p1-p2
+Step 5: export query results to CSV file
+$ ./OurDB example.hf -s3 ">=" 1950 -s4 ">=" 1.75 -p1 -p2 > example_result.acsv
+***********************************************************************************************************************
+With regard to the 7 read/write/compare field processing functions for different data types:
+We declare the following 3 funtion pointers to 7 encode functions (write to heapfile), to 7 decode functions (read from heapfile),
+and 7 compare functions (for field comparison), respectively. Please refer to "hf.c" to see their definitions, refer to "OurDB.c"
+to see function mapping.
+int (*encode[7])(void *record, char *line, int *offset, int length);
+int (*decode[7])(void *record, char *line, int *offset, int length);
+int (*compare[7])(void *record, int offset, void *value, int length);
+*********************************************************************************************************************
+Have a good day.  1:42 am, April.4    Signature: Chao, Rongxin
+	

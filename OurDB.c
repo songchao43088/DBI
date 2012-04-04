@@ -80,6 +80,7 @@ int main(int argc, char** argv){
 		inputschema[0]=(char*)malloc(5*sizeof(char));
 		// parse the first line stored in "line[]"
 		// get the CSV schema info.
+                // save the schema into "inputschema"
 		while(line[i]!=0){
 			
 			while(line[i]!=','){
@@ -102,13 +103,16 @@ int main(int argc, char** argv){
 			if (j<fields)
 				inputschema[j]=(char*)malloc(5*sizeof(char));
 		}
-
+		
+		// if there is no such existing heap file, create one
 		if (is_new ==1) {
 			hf_create(argv[1], inputschema, fields);
 			printf("A new heap file is created!\n");
 			hf = hf_open(argv[1]);
 			import_record(hf);
-		} else {
+		} 
+		// if heap file existed, it should be already opened as "hf"
+		else {
 			if (compareschema(hf->schema,inputschema,fields)!=0) {
 				printf("Fields do not match ! \n");
 				return 1;

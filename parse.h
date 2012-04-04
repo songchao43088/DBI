@@ -11,4 +11,6 @@ void printrecord(HFILE *hf, void *record, int * projection, int pyesno);
 // parse user input queries, including select "-s" and project "-p" operations
 void query(int argc, char** argv);
 
+//import records from CSV file
+//encode these records into heap file "hf" 
 void import_record(HFILE *hf);

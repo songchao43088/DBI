@@ -13,6 +13,7 @@ int compare_i1(void *record, int offset, void *value, int length){
 	char* target = record + offset;
 	char x = target[0];
 	char y = atoi((char*)value);
+
 	return x < y ? -1 : x > y ? 1 : 0;
 }
 
@@ -140,7 +141,8 @@ int decode_cx(void *record, char *line, int *offset, int length){
 }
 
 
-/* field processing, encode 
+/* 
+   field processing, encode 
    write the parsed string line to certain field of a record in heapfile
    specified by the offset
    return 0 if there is no segmentation fault
@@ -219,7 +221,8 @@ int encode_cx(void *record, char *line, int *offset, int length){
 }
 
 
-/* compare schema a with schema b, given the same number of fields "length"
+/* 
+   compare schema a with schema b, given the same number of fields "length"
    return 1: not match
    return 0: match
 */
@@ -247,11 +250,11 @@ int hf_create(const char *path, char **schema, int schemac){
 	hf.n_fields = schemac;
 	hf.content = NULL;
 	hf.path = path;
-	//printf("%d",hf_record_length(&hf));
+	
 
 	FILE *fp=fopen(path,"w+");
 	if (fp==NULL){
-		printf("fail to create file.");
+		printf("Fail to create file.\n");
 		exit(1);
 	}
 	// write the number of records and fields to heapfile
@@ -327,7 +330,7 @@ HFILE *hf_open(const char *path){
 				hf->schema_array[i]=3;
 			else if (tmp[0]=='r' && tmp[1]=='4')
 				hf->schema_array[i]=4;
-			else if (tmp[0]=='i' && tmp[1]=='8')
+			else if (tmp[0]=='r' && tmp[1]=='8')
 				hf->schema_array[i]=5;
 		} else {
 			sprintf(hf->schema[i], "c%d", tmp[1]);
@@ -348,7 +351,7 @@ HFILE *hf_open(const char *path){
      close heapfile and free memory allocation
 */
 void hf_close(HFILE *hf){
-//TODO: free substructure first.
+
 	int i;
 	for (i=0;i<hf->n_fields;i++)
 		free(hf->schema[i]);
@@ -410,7 +413,7 @@ RID hf_insert(HFILE *hf, void *record){
 	//long tmp;
 	FILE *fp=fopen(hf->path,"r+");
 	if (fp==NULL){
-		printf("fail to create file.");
+		printf("Fail to create file.\n");
 		exit(1);
 	}
 
@@ -443,7 +446,7 @@ int hf_record(HFILE *hf, RID id, void *record){
 	}
 	fseek(fp,id,SEEK_SET);
 	fread(record, hf_record_length(hf), 1, fp);
-	//printf("%s",(char*)record);
+	
 	fclose(fp);
 	return 0;
 }
@@ -478,7 +481,7 @@ CURSOR *hf_scan_open(HFILE *hf, COND* con, int conditions){
 	close cursor and free memory allocation
 */
 void hf_scan_close(CURSOR *cur){
-	//TODO:free condition
+	
 	int i;
 	for(i=0;i<cur->conditions;i++){
 		free((void *)cur->con[i].op);

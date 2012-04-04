@@ -9,7 +9,7 @@ struct hfile{
    char ** schema;
    int *schema_array;
    int n_fields;	//number of fields
-   void * content;	//pointer to content TODO:?
+   void * content;	//pointer to content
    const char *path;
 };
 typedef struct hfile HFILE;
