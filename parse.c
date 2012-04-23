@@ -1,5 +1,6 @@
 #include "hf.h"
 #include "parse.h"
+#include "lh.h"
 
 
 /*
@@ -12,7 +13,17 @@ void import_record(HFILE *hf){
 				int offset = 0;
 				int i = 0;	
 				int k = 0;
-				char line[1000];			
+				char line[1000];
+				int iter;
+				RID rid;	
+
+				INDEX_FILE **index_file;
+				index_file = (INDEX_FILE**)malloc(sizeof(INDEX_FILE*)*hf->n_fields);
+				for (iter=0;iter<hf->n_fields;iter++){
+					if(hf->index_array[iter]==1){
+						index_file[iter]=open_index(iter,hf);
+					}
+				}		
 				line[i] = getchar();
 				
 				while(line[i]!=EOF){	
@@ -43,14 +54,36 @@ void import_record(HFILE *hf){
 						line[i]=0;
 
 						(*encode[hf->schema_array[k]])(record, line, &offset,atoi((hf->schema[k])+1));
+						k++;
+					}
+						if (line[0]!=13 && line[0]!='\n'){
+					//printf("%d\n",i);
+					rid = hf_insert(hf, record);
+}
+
+					for(iter=0;iter<hf->n_fields;iter++){
+
+						if (hf->index_array[iter]==1){
+						//if (index[i]==1){
+
+							hash_record(hf, record, iter, rid, index_file[iter]);	//TODO:bianzhegehanshu
+
+						}
+
 					}
 
-					hf_insert(hf, record);
 					line[i]=0;
 					i=0;
 					k=0;
 					offset = 0;
+
 					line[i] = getchar();
+				}
+				for (iter=0;iter<hf->n_fields;iter++){
+					if (hf->index_array[iter]==1){
+						close_index(hf, iter, index_file[iter]);
+						//print_index(hf, iter, index_file[iter]);
+					}
 				}
 	free(record);
 }
@@ -112,11 +145,14 @@ void query(int argc, char** argv){
 	int *projection;
 	int pyesno = 0;
 	int flag = 0;
+	int byesno = 0;
+	int *index;
+
 	hf = hf_open(argv[1]);
 	if (hf == NULL)
 		return ;
 	projection = (int*)calloc(hf->n_fields,sizeof(int));
-	
+	index = (int*)calloc(hf->n_fields,sizeof(int));
 	
 	record = calloc(hf_record_length(hf),sizeof(char));
 
@@ -134,6 +170,7 @@ void query(int argc, char** argv){
 			exit(1);
 		}
 	}
+
 	
 	num = 0;
 	
@@ -166,10 +203,25 @@ void query(int argc, char** argv){
 				int column = atoi(&(argv[i][2]));
 				pyesno = 1;
 				projection[column-1]=1;
-			}
+			} else if (argv[i][0]=='-' && argv[i][1]=='b'){
+				if (atoi(&(argv[i][2]))==0) {
+					printf("Invalid Column\n");
+					return;
+				}
+				int column = atoi(&(argv[i][2]));
+				byesno = 1;
+				index[column-1]=1;
+			} 
 		}
-	
-				
+	if (byesno == 1){
+		for (i = 0; i< hf->n_fields; i++){
+			if (index[i]==1){
+				init_index(i, hf);
+				hf->index_array[i]=1;
+			}		
+		}
+	}
+
 	if (pyesno == 0 || projection[0] == 1) {		
 		printf("%s",hf->schema[0]);
                 flag = 1;
@@ -188,6 +240,42 @@ void query(int argc, char** argv){
 
 	}
 	printf("\n");
+
+	if (byesno==1){
+	//TODO:xianjiansuoyin
+		cur = hf_scan_open(hf, NULL, 0);
+		RID id;
+		INDEX_FILE **index_file;
+		index_file = (INDEX_FILE**)malloc(sizeof(INDEX_FILE*)*hf->n_fields);
+		for (i=0;i<hf->n_fields;i++){
+			if (index[i]==1){
+				index_file[i]=open_index(i,hf);
+			}
+		}
+		
+			
+		do {
+			id = hf_scan_next(cur, record);
+	
+			if (id != -1){
+				for(i=0;i<hf->n_fields;i++){
+					//if (hf->index_array[i]==1){
+					if (index[i]==1){
+						hash_record(hf, record, i, id, index_file[i]);	//TODO:bianzhegehanshu
+					}
+				}
+			}
+		} while (id != -1);
+		for (i=0;i<hf->n_fields;i++){
+			if (index[i]==1){
+				close_index(hf, i, index_file[i]);
+				//print_index(hf, i, index_file[i]);
+			}
+		}
+		free(index_file);
+		hf_scan_close(cur);
+	}
+
 	cur = hf_scan_open(hf, con, num);
 	
 	RID id;

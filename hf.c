@@ -1,7 +1,8 @@
-#include "hf.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "lh.h"
+#include "hf.h"
 
 /* field processing, compare value given by selection clause in command line
    with corresponding fields of records in the heap file
@@ -34,9 +35,9 @@ int compare_i4(void *record, int offset, void *value, int length){
 }
 
 int compare_i8(void *record, int offset, void *value, int length){
-	long* target = record + offset;
-	long x = target[0];
-	long y = atoi((char*)value);
+	long  long* target = record + offset;
+	long long x = target[0];
+	long long y = atoi((char*)value);
 
 	return x < y ? -1 : x > y ? 1 : 0;
 }
@@ -89,6 +90,7 @@ int decode_i2(void *record, char *line, int *offset, int length){
 	short* target = record + *offset;
 	short i1 = target[0];
 	sprintf(line,"%d",i1);
+	//printf("in decode:%d\n",i1);
 	*offset = *offset+length;
 
 	return 0;
@@ -104,9 +106,9 @@ int decode_i4(void *record, char *line, int *offset, int length){
 }
 
 int decode_i8(void *record, char *line, int *offset, int length){
-	long* target = record + *offset;
-	long i1 = target[0];
-	sprintf(line,"%lu",i1);
+	long long* target = record + *offset;
+	long long i1 = target[0];
+	sprintf(line,"%lld",i1);
 	*offset = *offset+length;
 
 	return 0;
@@ -179,9 +181,9 @@ int encode_i4(void *record, char *line, int *offset, int length){
 	return 0;
 }
 int encode_i8(void *record, char *line, int *offset, int length){
-	long tmp;
+	long long tmp;
 	tmp = atoi(line);
-	long * target;
+	long long * target;
 	target = record + *offset;
 	target[0]=tmp;
 	*offset = *offset+length;
@@ -228,10 +230,13 @@ int encode_cx(void *record, char *line, int *offset, int length){
 */
 int compareschema(char  **a, char **b, int length) {
 	int i;
-	for(i=0;i<length;i++){
 
+	for(i=0;i<length;i++){
+		if (b[i][strlen(b[i])-1]==13)
+			b[i][strlen(b[i])-1]=0;
 		if (strcmp(a[i],b[i])!=0) 
-		return 1;
+			return 1;
+
 	}
 
 	return 0;
@@ -258,7 +263,7 @@ int hf_create(const char *path, char **schema, int schemac){
 		exit(1);
 	}
 	// write the number of records and fields to heapfile
-	fwrite(&hf.n_records,sizeof(long),1,fp);
+	fwrite(&hf.n_records,sizeof(long long),1,fp);
 	fwrite(&hf.n_fields,sizeof(int),1,fp);
 	// write the schema to heapfile
 	for(i = 0; i < schemac; i++)
@@ -287,20 +292,21 @@ HFILE *hf_open(const char *path){
 	char tmp[2];
 	int i;
 	HFILE *hf = (HFILE*)malloc(sizeof(HFILE));
-
+	char *main_index_file;
+	char *overflow_index_file;
 	if (hf==NULL){
 		printf("Not enough memory.\n");
 		exit(1);
 	}
 
-	FILE *fp=fopen(path,"rd");
+	FILE *fp=fopen(path,"r");
 	if (fp==NULL){
 		printf("Fail to open heap file.\n");
 		return NULL;
 	}
 	
 	// read the number of records
-	fread(&n_records, sizeof(long),1,fp);
+	fread(&n_records, sizeof(long long),1,fp);
 	hf->n_records=n_records;
 
         // read the number of fields
@@ -313,6 +319,7 @@ HFILE *hf_open(const char *path){
         // "schema_array" determines accesses to different read/write/compare functions  
 	hf->schema=(char**)malloc(n_fields*sizeof(char*));
 	hf->schema_array=(int*)malloc(n_fields*sizeof(int));
+	hf->index_array=(int*)malloc(n_fields*sizeof(int));
 	for(i=0;i<n_fields;i++){
 		fread(tmp, sizeof(char),2,fp);
 		hf->schema[i]=(char*)calloc(5, sizeof(char));
@@ -339,8 +346,36 @@ HFILE *hf_open(const char *path){
 
 	}
 	hf->path=path;
-	
+
+	int length = strlen(hf->path)+10;
+	main_index_file = calloc(length,sizeof(char));
+	overflow_index_file = calloc(length,sizeof(char));
+
+	for(i=0;i<n_fields;i++){
+		FILE *fp1 , *fp2;
+		
+		get_index_file_name(hf->path, i+1, main_index_file, overflow_index_file);
+
+		fp1 = fopen(main_index_file,"r");
+		fp2 = fopen(overflow_index_file,"r");
+		if (fp1 != NULL && fp2 != NULL){
+			hf->index_array[i]=1;
+			fclose(fp1);
+			fclose(fp2);
+
+		} else {
+			hf->index_array[i]=0;
+		}
+
+		//free(main_index_file);
+
+		//free(overflow_index_file);
+
+		
+	}
 	fclose(fp);
+	//free(main_index_file);
+	//free(overflow_index_file);
 
 	return hf;
 	
@@ -413,7 +448,7 @@ RID hf_insert(HFILE *hf, void *record){
 	//long tmp;
 	FILE *fp=fopen(hf->path,"r+");
 	if (fp==NULL){
-		printf("Fail to create file.\n");
+		printf("Fail to open file.\n");
 		exit(1);
 	}
 
@@ -427,7 +462,7 @@ RID hf_insert(HFILE *hf, void *record){
 	// draw back the cursor to the beginning of file
         // overwrite the number of records to update
 	fseek(fp,0,SEEK_SET);
-	fwrite(&(hf->n_records), sizeof(long), 1, fp);
+	fwrite(&(hf->n_records), sizeof(long long), 1, fp);
 	fclose(fp);
 
 	return r;
@@ -455,7 +490,7 @@ int hf_record(HFILE *hf, RID id, void *record){
 /*
 	return the total number of records in the file
 */
-long hf_records(HFILE *hf){
+long long hf_records(HFILE *hf){
 	return hf->n_records;
 }
 
@@ -465,14 +500,26 @@ long hf_records(HFILE *hf){
 */
 CURSOR *hf_scan_open(HFILE *hf, COND* con, int conditions){
 	CURSOR *cur = (CURSOR*)malloc(sizeof(CURSOR));
+	int i;
 	cur->hf = hf;
 	cur->con = con;
 	cur->conditions = conditions;
         // set the initial position of the cursor
         // point to the first record
         // we use 2-byte for the storage of each field in schema
-	cur->current = sizeof(long)+sizeof(int)+2*hf->n_fields;
+	cur->current = sizeof(long long)+sizeof(int)+2*hf->n_fields;
+	cur->index = -1;
+	for (i=0;i<conditions;i++){
 
+		if (strcmp(con[i].op,"=")==0 && hf->index_array[con[i].field-1]==1){
+
+			cur->index = i;
+			break;
+		}
+	}
+	cur->index_mo = 0;
+	cur->index_current_bucket = -1;
+	cur->index_bucket_offset = 12;
 	return cur;
 }
 
@@ -553,29 +600,100 @@ int filter(void *record, COND *con, int conditions, HFILE *hf){
 	returns (rid_t) -1 in case we are out of records
 */
 RID hf_scan_next(CURSOR *cur, void *record){
+	if (cur->index == -1){
 
-	long schema_space = 2*cur->hf->n_fields;
-        long record_space = (cur->hf->n_records) * hf_record_length(cur->hf);
-	long file_size = sizeof(long) + sizeof(int) + schema_space + record_space;
-		
-	if (cur->current >= file_size)
-		return -1;
-
-	hf_record(cur->hf, cur->current, record);
-	
-	cur->current += hf_record_length(cur->hf);
-     
-        // if the current record doesn't meet all the conditions, fetch and check the next
-	while (filter(record, cur->con, cur->conditions, cur->hf) == 0){
+		long long schema_space = 2*cur->hf->n_fields;
+   	     long long record_space = (cur->hf->n_records) * hf_record_length(cur->hf);
+		long long file_size = sizeof(long long) + sizeof(int) + schema_space + record_space;
 		
 		if (cur->current >= file_size)
 			return -1;
+
 		hf_record(cur->hf, cur->current, record);
-			
+	
 		cur->current += hf_record_length(cur->hf);
-	}
+     
+   	     // if the current record doesn't meet all the conditions, fetch and check the next
+		while (filter(record, cur->con, cur->conditions, cur->hf) == 0){
 			
-	return cur->current - hf_record_length(cur->hf);
+			if (cur->current >= file_size)
+				return -1;
+			hf_record(cur->hf, cur->current, record);
+				
+			cur->current += hf_record_length(cur->hf);
+		}
+			
+		return cur->current - hf_record_length(cur->hf);
+	} else {
+
+		INDEX_FILE *index_file;
+		index_file = open_index(cur->con[cur->index].field-1, cur->hf);
+		void *buf2 = calloc(105,sizeof(char));
+		int zero = 0;
+		if (buf2==NULL){
+			printf("Malloc failed");
+			exit(1);
+		} 
+		if (cur->index_current_bucket == -1){
+
+			(*encode[cur->hf->schema_array[cur->con[cur->index].field-1]])(buf2, (char*)cur->con[cur->index].value, &zero,atoi((cur->hf->schema[cur->con[cur->index].field-1])+1));
+			zero = 0;
+			cur->index_current_bucket = (*calculate_index[cur->hf->schema_array[cur->con[cur->index].field-1]])(buf2,index_file->s,index_file->n,0);
+		}
+		int i = cur->con[cur->index].field-1;
+	
+		int original_offset;
+		int original_usage;
+		void *original_bucket = calloc(BSIZE,sizeof(char));
+		//void *bucket;
+		//bucket = calloc(BSIZE,sizeof(char));
+		if (original_bucket==NULL){
+			printf("Malloc failed");
+			exit(1);
+		}
+		void *buf = calloc(105,sizeof(char));
+		if (buf==NULL){
+			printf("Malloc failed");
+			exit(1);
+		}
+		if (cur->index_mo == 0){
+			read_bucket(original_bucket, cur->index_current_bucket, index_file->main_path);
+		} else {
+			read_bucket(original_bucket, cur->index_current_bucket, index_file->overflow_path);
+		}
+		original_usage = ((int*)original_bucket)[0];
+		for (original_offset = cur->index_bucket_offset; original_offset < original_usage; original_offset += atoi((cur->hf->schema[i])+1)+sizeof(long long)){
+			RID rid = (*read_keypair[cur->hf->schema_array[i]])(original_bucket, buf, original_offset, atoi((cur->hf->schema[i])+1));
+			hf_record(cur->hf, rid, record);
+			if (filter(record, cur->con, cur->conditions, cur->hf) == 1){
+				cur->index_bucket_offset = original_offset + atoi((cur->hf->schema[i])+1)+sizeof(long long);
+				free(original_bucket);
+				free(buf);
+				return rid;
+			}
+		}
+		while (((long long*)(original_bucket+4))[0]!=-1){
+			int current_bucket = ((long long*)(original_bucket+4))[0];
+			read_bucket(original_bucket, ((long long*)(original_bucket+4))[0], index_file->overflow_path);
+			original_usage = ((int*)original_bucket)[0];
+			for (original_offset = 12; original_offset < original_usage; original_offset += atoi((cur->hf->schema[i])+1)+sizeof(long long)){
+				RID rid = (*read_keypair[cur->hf->schema_array[i]])(original_bucket, buf, original_offset, atoi((cur->hf->schema[i])+1));
+				hf_record(cur->hf, rid, record);
+				if (filter(record, cur->con, cur->conditions, cur->hf) == 1){
+					cur->index_bucket_offset = original_offset + atoi((cur->hf->schema[i])+1)+sizeof(long long);
+					cur->index_current_bucket = current_bucket;
+					cur->index_mo = 1;
+					free(original_bucket);
+					free(buf);
+					return rid;
+				}
+			}
+		}
+		free(original_bucket);
+		free(buf);
+		free(buf2);
+		return -1;
+	}
 }
 
 

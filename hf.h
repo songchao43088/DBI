@@ -1,13 +1,14 @@
 #ifndef CU_HF
 #define CU_HF
 
-typedef long RID;
+typedef long long RID;
 
 /* heap file struct */
 struct hfile{
-   long n_records;	//number of records
+   long long n_records;	//number of records
    char ** schema;
    int *schema_array;
+   int *index_array;
    int n_fields;	//number of fields
    void * content;	//pointer to content
    const char *path;
@@ -28,6 +29,10 @@ struct cursor{
    COND *con;
    int conditions;
    RID current;	// the current location (offset)
+   int index;
+   int index_mo;
+   int index_current_bucket;
+   int index_bucket_offset;
 };
 typedef struct cursor CURSOR;
 
@@ -122,7 +127,7 @@ RID hf_insert(HFILE *hf, void *record);
 int hf_record(HFILE *hf, RID id, void *record);
 
 // return the total number of records in the file
-long hf_records(HFILE *hf);
+long long hf_records(HFILE *hf);
 
 
 

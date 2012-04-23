@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-c -Wall
 LDFLAGS=
-SOURCES=OurDB.c hf.c parse.c
+SOURCES=OurDB.c hf.c parse.c lh.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=OurDB
 
@@ -13,4 +13,4 @@ $(EXECUTABLE): $(OBJECTS)
 .o:
 	$(CC) $(CFLAGS) $< -o $@
 clean: 
-	rm $(EXECUTABLE) *.o *.hf
+	rm $(EXECUTABLE) *.o *.hf *.lht *.lho

@@ -53,3 +53,45 @@ int (*compare[7])(void *record, int offset, void *value, int length);
 *********************************************************************************************************************
 Have a good day.  1:42 am, April.4    Signature: Chao, Rongxin
 	
+
+Change log of project 2.2
+********************************************************************************
+Files: 
+"lh.h"	
+	the header of all linear hashing related functions
+"lh.c"	
+	corresponding .c file that defines functions declared in "lh.h"
+****************************************************************************************************************************
+new commands supported by our program:
+-b[n]	will build a hash index on nth column.
+usage: 	./OurDB heapfile.hf -b1
+		This will build a hash index on 1st column of heapfile named "heapfile.hf"
+	./OurDB heapfile.hf -b1 -b2
+		This will build two hash indices on 1sh and 2nd column within one scan of the heapfile.
+	./OurDB heapfile.hf -i < example.csv
+		This will insert new records from example.csv to heapfile.hf. This cammand is also supported in version 2.1. But now
+		when inserting records, it will also updates all the hash indices associated with that heapfile. 
+	./OurDB heapfile.hf -i -b1 < example.csv
+		This command has the same meaning as first run "./OurDB heapfile.hf -b1" followed by "./OurDB heapfile.hf -i < example.csv"
+		Note: -i must comes before any -b[n]
+	./OurDB heapfile.hf -s1 "=" 1 -p1
+		This selection and projection commands is also supported in version 2.1. But now when we are doing a equality comparison,
+		and we have a hash index built on that column, then we will utilize that hash index to speed up the select.
+	./OurDB heapfile.hf -b1 -s1 "=" 1 -p1
+		This combination of building index and selection commands is interpreted as running "./OurDB heapfile.hf -b1" followed by
+		"./OurDB heapfile.hf -s1 "=" 1 -p1"
+****************************************************************************************************************************
+Some implementation details of our hash index component.
+Bucket size:
+	Bucket size is defined using a preprocessing "#define" command. We set the size to be 120 bytes because the data type
+	with maximum bytes is char100, which will need 100 bytes(for data) + 8(for RID) for one single key-rid pair. 
+Hash functions:
+	For real number, we cast its binary representation to a integer and then calculate its hash index.
+	For string, we sum up its characters and use the sum to calculate its hash index.
+****************************************************************************************************************************
+Performance Discussion
+We created a heapfile with 250,000 records. Then we tried to do a equality selection which is expected to return 50 records
+before we build any index. This operation takes approximately 3.7 seconds. Then we build a hash index on the column to which 
+we are applying this equality comparison. Then we run the same selection again. This time the result shows up instantly. This
+shows that the hash index we build do help improve the performance. 
+
